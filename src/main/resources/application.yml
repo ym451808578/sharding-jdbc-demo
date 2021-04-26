@@ -1,0 +1,63 @@
+spring:
+  shardingsphere:
+    datasource:
+      names: d0, d1,m0,s0
+
+      d0:
+        type: com.alibaba.druid.pool.DruidDataSource
+        driverClassName: com.mysql.cj.jdbc.Driver
+        url: jdbc:mysql://localhost:3306/order-db1?serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf-8
+        username: root
+        password: root
+      d1:
+        type: com.alibaba.druid.pool.DruidDataSource
+        driverClassName: com.mysql.cj.jdbc.Driver
+        url: jdbc:mysql://localhost:3306/user-db?serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf-8
+        username: root
+        password: root
+
+      m0:
+        type: com.alibaba.druid.pool.DruidDataSource
+        driverClassName: com.mysql.cj.jdbc.Driver
+        url: jdbc:mysql://192.168.30.132:3306/test?serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf-8
+        username: root
+        password: root
+
+      s0:
+        type: com.alibaba.druid.pool.DruidDataSource
+        driverClassName: com.mysql.cj.jdbc.Driver
+        url: jdbc:mysql://192.168.30.133:3306/test?serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf-8
+        username: root
+        password: root
+    ##配置读写分离
+    masterslave:
+      name: ms
+      master-data-source-name: m0
+      slave-data-source-names: s0
+    sharding:
+      tables:
+        t_order:
+          actualDataNodes: d$->{0}.t_order_$->{1..2}
+          #如果添加课程id是偶数把数据添加course_1，如果奇数添加到course_2
+          tableStrategy:
+            inline:
+              shardingColumn: oid
+              algorithmExpression: t_order_$->{oid % 2 + 1}
+          keyGenerator:
+            type: SNOWFLAKE
+            column: oid
+        #配置user-db数据库里面t_user专库专表
+        t_user:
+          actualDataNodes: d$->{1}.t_user
+        #配置读写分离的t_course专库专表
+        t_course:
+          actualDataNodes: m$->{0}.t_course
+      #配置公共表
+      broadcast-tables: t_dict
+
+    props:
+      sql.show: true
+
+  # 一个实体类对应两张表，覆盖
+  main:
+    allowBeanDefinitionOverriding: true
